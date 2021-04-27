@@ -24,274 +24,6 @@ from matplotlib import rcParams
 
 
 
-def display_all(df):
-    """
-    Docstring: make dataframe display all rows/columns (within 1000).
-    
-    Parameters
-    ----------
-    df: pandas dataframe to be display.
-    """
-
-    with pd.option_context('display.max_rows',1000,'display.max_columns',1000):
-        display(df)
-        
-        
-def addValue_withoutHue(plot, feature):
-    """
-    Docstring: display the number of counts and percentage
-    
-    Parameters
-    ----------
-    plot: the figure instance
-    feature: which feature to plot
-    """
-
-    total = len(feature)
-    for p in plot.patches:
-        cnt = p.get_height()
-        percentage = '({:.1f}%)'.format(100 * p.get_height()/total)
-        x_cnt = p.get_x() + p.get_width() / 2 - 0.1
-        x_pct = p.get_x() + p.get_width() / 2 + 0.05
-        y = p.get_y() + p.get_height()+1
-        plot.annotate(cnt, (x_cnt, y), size = 12)
-        plot.annotate(percentage, (x_pct, y), size = 12)
-    plt.show()
-    
-def plot_missing_values(df):
-    """
-    Docstring: For each column with missing values plot proportion that is missing.
-    
-    Parameters
-    ----------
-    df: target dataframe
-    """
-    data = [(col, df[col].isnull().sum() / len(df)) 
-            for col in df.columns if df[col].isnull().sum() > 0]
-    col_names = ['column', 'percent_missing']
-    missing_df = pd.DataFrame(data, columns=col_names).sort_values('percent_missing')
-    pylab.rcParams['figure.figsize'] = (15, 8)
-    missing_df.plot(kind='barh', x='column', y='percent_missing'); 
-    plt.title('Percent of missing values in colummns');
-    
-def fraud_rate(df,col,col_name):
-    """
-    Docstring: count fraud rate by different categories
-    
-    Parameters
-    ----------
-    df: pandas dataframe
-    col: categories from which column
-    col_name: fraud rate column name
-    
-    Return
-    ----------
-    the fraud rate of each categories from the "col" field
-    """
-    return df.groupby(col).apply(lambda x:pd.Series({col_name:x.isFraud.mean()}))
-
-
-def ttest(df,ind_col,target,equal_var=True):
-    """
-    Docstring: Calculate the T-test for the means of two independent samples of scores
-    
-    Parameters
-    ----------
-    df: pandas dataframe
-    ind_col: the column that used to separate two independent samples with value True and False
-    target: the column that used to count mean
-    equal_var: if the two group have equal variance, default is True
-    
-    Return
-    ----------
-    Will print t statistic, pvalue and significant test
-    """
-    test = ttest_ind(df.loc[df[ind_col]==True,target],df.loc[df[ind_col]==False,target],equal_var=equal_var)
-    print("t statistic is {} with p value {}".format(test.statistic,test.pvalue))
-    print("---------------------------------")
-    if_sig = "significant" if test.pvalue<0.05 else "not significant"
-    print("The difference is",if_sig)
-    
-def to_part_of_day(x):
-    if x < 5:
-        return "midnight"
-    elif x < 12:
-        return "morning"
-    elif x<18:
-        return "afternoon"
-    else:
-        return "night"
-    
-def plot_ROC(y_pred, y_train,y_pred_val, y_val, y_pred_te, y_test):
-    """
-    Docstring: plot the roc curve
-    """  
-
-    fpr_0, tpr_0, thresholds_0 = roc_curve(y_train, y_pred)
-    fpr_1, tpr_1, thresholds_1 = roc_curve(y_val, y_pred_val)
-    fpr_2, tpr_2, thresholds_2 = roc_curve(y_test, y_pred_te)
-    roc_auc_0 = auc(fpr_0, tpr_0)
-    roc_auc_1 = auc(fpr_1, tpr_1)
-    roc_auc_2 = auc(fpr_2, tpr_2)
-    print("Area under the ROC curve - train: %f" % roc_auc_0)
-    print("Area under the ROC curve - validation: %f" % roc_auc_1)
-    print("Area under the ROC curve - test: %f" % roc_auc_2)
-    # Plot ROC curve
-    plt.figure(figsize=(8,8))
-    plt.plot(fpr_0, tpr_0, label='ROC curve - train(AUC = %0.2f)' % roc_auc_0, color='g')
-    plt.plot(fpr_1, tpr_1, label='ROC curve - validation (AUC = %0.2f)' % roc_auc_1, color='b')
-    plt.plot(fpr_2, tpr_2, label='ROC curve - test (AUC = %0.2f)' % roc_auc_2, color='r')
-    plt.plot([0, 1], [0, 1], 'k--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.0])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('ROC for lead score model')
-    plt.legend(loc="lower right")
-    plt.show()
-    
-    
-def plot_metrics(model, X_tr, y_train,X_val,y_val, X_te, y_test):
-    """
-    Docstring: plot the recall-precision report, roc curve and confusion matrix for train and test data
-    """
-    y_pred = model.predict(X_tr)#.argmax(axis=1)
-    y_pred_val = model.predict(X_val)#.argmax(axis=1)
-    y_pred_te = model.predict(X_te)#.argmax(axis=1)
-    y_pred = [1 if y>=0.5 else 0 for y in y_pred]   
-    y_pred_val = [1 if y>=0.5 else 0 for y in y_pred_val]
-    y_pred_te = [1 if y>=0.5 else 0 for y in y_pred_te]
-    
-    confusion1 = metrics.confusion_matrix(y_train, y_pred)
-    confusion3 = metrics.confusion_matrix(y_test, y_pred_te)
-    confusion2 = metrics.confusion_matrix(y_val, y_pred_val)
-    print("   -----------------------------")
-    print("   classification report TRAIN")    
-    print("   -----------------------------")
-    print(metrics.classification_report(y_train,y_pred))
-    print("   -----------------------------")
-    print("   classification report VALID")   
-    print("   -----------------------------")
-    print(metrics.classification_report(y_val,y_pred_val))
-    print("   -----------------------------")
-    print("   classification report TEST")   
-    print("   -----------------------------")
-    print(metrics.classification_report(y_test,y_pred_te))
-    print("\n\n")
-    print("   -----------------------------")
-    print("    ROC")
-    print("   -----------------------------")
-#     plt.title('credit card model ROC')
-#     plt.plot(fpr, tpr, 'b', label = 'AUC = %0.2f' % roc_auc)
-#     plt.legend(loc = 'lower right')
-#     plt.plot([0, 1], [0, 1],'r--')
-#     plt.xlim([0, 1])
-#     plt.ylim([0, 1])
-#     plt.ylabel('True Positive Rate')
-#     plt.xlabel('False Positive Rate')
-#     plt.show()
-    plot_ROC(y_pred, y_train,y_pred_val, y_val, y_pred_te, y_test)
-    print("\n\n")
-    print("   -----------------------------")
-    print("    confusion matrix TRAIN")
-    print("   -----------------------------")
-    sns.heatmap(confusion1, annot=True, fmt='d', cmap='Blues')
-    plt.show()
-    print("   -----------------------------")
-    print("    confusion matrix VALID")
-    print("   -----------------------------")
-    sns.heatmap(confusion2, annot=True, fmt='d', cmap='Blues')
-    plt.show()
-    print("   -----------------------------")
-    print("    confusion matrix TEST")
-    print("   -----------------------------")
-    sns.heatmap(confusion3, annot=True, fmt='d', cmap='Blues')  
-
-    
-    
-def balanceSampling(X_tr, y_train, up_ratio=1,dn_ratio=1):
-    """
-    Docstring: up and under sampling data
-    
-    Parameters
-    ----------
-    up_ratio: upsampling ratio
-    dn_ratio: downsampling ratio
-
-    """
-    # Ratio argument is the percentage of the upsampled minority class in relation to the majority class. Default is 1.0
-    over = SMOTE(sampling_strategy = up_ratio)
-    under = RandomUnderSampler(sampling_strategy = dn_ratio)
-    steps = [('over', over), ('under', under)]
-    pipeline = Pipeline(steps=steps)
-    X_train_sm, y_train_sm = pipeline.fit_resample(X_tr, y_train)
-    
-    print(X_train_sm.shape, y_train_sm.shape)
-    return X_train_sm, y_train_sm
-    
-    
-def metric(self,prob,cl):
-    self.fpr, self.tpr, threshold = roc_curve(self.y_valid, prob)
-    auc = roc_auc_score(self.y_valid,prob)
-    self.plot_roc_curve(self.fpr,self.tpr)
-    acc = (self.y_valid==cl).mean()
-    f1 = f1_score(self.y_valid,cl)
-    print(acc,f1,auc)    
-    
-
-"""""""""""""""""""""""""""""""""""""""""
-XGBOOST + BAYESIAN OPTIMIZATION
-
-"""""""""""""""""""""""""""""""""""""""""
-    
-def xgbCv(dtrain,dvalid, eta, gamma, maxDepth, minChildWeight, subsample, colSample):
-    # prepare xgb parameters 
-    params = {
-        "objective": "binary:logistic",
-        "booster" : "gbtree",
-        "eval_metric": "auc",
-        "tree_method": 'auto',
-        "silent": 1,
-        "eta": eta,
-        "max_depth": int(maxDepth),
-        "min_child_weight" : minChildWeight,
-        "subsample": subsample,
-        "colsample_bytree": colSample,
-        "gamma": gamma
-    }
-    
-    #dtrain = xgb.DMatrix(X_train, y_train) 
-    #dvalid = xgb.DMatrix(X_valid, y_valid)
-    watchlist = [(dtrain, 'train'), (dvalid, 'eval')]
-   # print("numr",numRounds)
-    gbm = xgb.train(params, dtrain, 200, evals = watchlist, early_stopping_rounds = 100)
-    score = gbm.best_score
-    
-    # return the best score
-    return -1.0*score # invert the cv score to let bayopt maximize
-    
-def bayesOpt(dtrain,dvalid):
-    ranges = {
-        #'numRounds': (100, 500),
-        'eta': (0.001, 0.3),
-        'gamma': (0, 25),
-        'maxDepth': (1, 10),
-        'minChildWeight': (0, 10),
-        'subsample': (0, 1),
-        'colSample': (0, 1)
-    }
-    # proxy through a lambda to be able to pass train and features
-    optFunc = lambda eta, gamma, maxDepth, minChildWeight, subsample, colSample: xgbCv(dtrain,dvalid, eta, gamma, maxDepth, minChildWeight, subsample, colSample)
-    bo = BayesianOptimization(optFunc, ranges)
-    bo.maximize(init_points = 2, n_iter = 1, kappa = 2, acq = "ei", xi = 0.0)
-    
-    #bestAUC = round((-1.0 * bo.res['max']['max_val']), 6)
-    #print("\n Best AUC found: %f" % bestAUC)
-    #print("\n Parameters: %s" % bo.res['max']['max_params'])
-    return bo
-    
-    
-    
     
 """""""""""""""""""""""""""""""""""""""""
 sklearn custom fucntions and transformers
@@ -696,8 +428,281 @@ def convert_to_date(df):
 
 
 
+"""""""""""""""""""""""""""""""""""""""""
+TTEST+VISUALIZATION+OTHERS
+
+"""""""""""""""""""""""""""""""""""""""""
 
 
+
+def display_all(df):
+    """
+    Docstring: make dataframe display all rows/columns (within 1000).
+    
+    Parameters
+    ----------
+    df: pandas dataframe to be display.
+    """
+
+    with pd.option_context('display.max_rows',1000,'display.max_columns',1000):
+        display(df)
+        
+        
+def addValue_withoutHue(plot, feature):
+    """
+    Docstring: display the number of counts and percentage
+    
+    Parameters
+    ----------
+    plot: the figure instance
+    feature: which feature to plot
+    """
+
+    total = len(feature)
+    for p in plot.patches:
+        cnt = p.get_height()
+        percentage = '({:.1f}%)'.format(100 * p.get_height()/total)
+        x_cnt = p.get_x() + p.get_width() / 2 - 0.1
+        x_pct = p.get_x() + p.get_width() / 2 + 0.05
+        y = p.get_y() + p.get_height()+1
+        plot.annotate(cnt, (x_cnt, y), size = 12)
+        plot.annotate(percentage, (x_pct, y), size = 12)
+    plt.show()
+    
+def plot_missing_values(df):
+    """
+    Docstring: For each column with missing values plot proportion that is missing.
+    
+    Parameters
+    ----------
+    df: target dataframe
+    """
+    data = [(col, df[col].isnull().sum() / len(df)) 
+            for col in df.columns if df[col].isnull().sum() > 0]
+    col_names = ['column', 'percent_missing']
+    missing_df = pd.DataFrame(data, columns=col_names).sort_values('percent_missing')
+    pylab.rcParams['figure.figsize'] = (15, 8)
+    missing_df.plot(kind='barh', x='column', y='percent_missing'); 
+    plt.title('Percent of missing values in colummns');
+    
+def fraud_rate(df,col,col_name):
+    """
+    Docstring: count fraud rate by different categories
+    
+    Parameters
+    ----------
+    df: pandas dataframe
+    col: categories from which column
+    col_name: fraud rate column name
+    
+    Return
+    ----------
+    the fraud rate of each categories from the "col" field
+    """
+    return df.groupby(col).apply(lambda x:pd.Series({col_name:x.isFraud.mean()}))
+
+
+def ttest(df,ind_col,target,equal_var=True):
+    """
+    Docstring: Calculate the T-test for the means of two independent samples of scores
+    
+    Parameters
+    ----------
+    df: pandas dataframe
+    ind_col: the column that used to separate two independent samples with value True and False
+    target: the column that used to count mean
+    equal_var: if the two group have equal variance, default is True
+    
+    Return
+    ----------
+    Will print t statistic, pvalue and significant test
+    """
+    test = ttest_ind(df.loc[df[ind_col]==True,target],df.loc[df[ind_col]==False,target],equal_var=equal_var)
+    print("t statistic is {} with p value {}".format(test.statistic,test.pvalue))
+    print("---------------------------------")
+    if_sig = "significant" if test.pvalue<0.05 else "not significant"
+    print("The difference is",if_sig)
+    
+def to_part_of_day(x):
+    if x < 5:
+        return "midnight"
+    elif x < 12:
+        return "morning"
+    elif x<18:
+        return "afternoon"
+    else:
+        return "night"
+    
+def plot_ROC(y_pred, y_train,y_pred_val, y_val, y_pred_te, y_test):
+    """
+    Docstring: plot the roc curve
+    """  
+
+    fpr_0, tpr_0, thresholds_0 = roc_curve(y_train, y_pred)
+    fpr_1, tpr_1, thresholds_1 = roc_curve(y_val, y_pred_val)
+    fpr_2, tpr_2, thresholds_2 = roc_curve(y_test, y_pred_te)
+    roc_auc_0 = auc(fpr_0, tpr_0)
+    roc_auc_1 = auc(fpr_1, tpr_1)
+    roc_auc_2 = auc(fpr_2, tpr_2)
+    print("Area under the ROC curve - train: %f" % roc_auc_0)
+    print("Area under the ROC curve - validation: %f" % roc_auc_1)
+    print("Area under the ROC curve - test: %f" % roc_auc_2)
+    # Plot ROC curve
+    plt.figure(figsize=(8,8))
+    plt.plot(fpr_0, tpr_0, label='ROC curve - train(AUC = %0.2f)' % roc_auc_0, color='g')
+    plt.plot(fpr_1, tpr_1, label='ROC curve - validation (AUC = %0.2f)' % roc_auc_1, color='b')
+    plt.plot(fpr_2, tpr_2, label='ROC curve - test (AUC = %0.2f)' % roc_auc_2, color='r')
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.0])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC for lead score model')
+    plt.legend(loc="lower right")
+    plt.show()
+    
+    
+def plot_metrics(model, X_tr, y_train,X_val,y_val, X_te, y_test):
+    """
+    Docstring: plot the recall-precision report, roc curve and confusion matrix for train and test data
+    """
+    y_pred = model.predict(X_tr)#.argmax(axis=1)
+    y_pred_val = model.predict(X_val)#.argmax(axis=1)
+    y_pred_te = model.predict(X_te)#.argmax(axis=1)
+    y_pred = [1 if y>=0.5 else 0 for y in y_pred]   
+    y_pred_val = [1 if y>=0.5 else 0 for y in y_pred_val]
+    y_pred_te = [1 if y>=0.5 else 0 for y in y_pred_te]
+    
+    confusion1 = metrics.confusion_matrix(y_train, y_pred)
+    confusion3 = metrics.confusion_matrix(y_test, y_pred_te)
+    confusion2 = metrics.confusion_matrix(y_val, y_pred_val)
+    print("   -----------------------------")
+    print("   classification report TRAIN")    
+    print("   -----------------------------")
+    print(metrics.classification_report(y_train,y_pred))
+    print("   -----------------------------")
+    print("   classification report VALID")   
+    print("   -----------------------------")
+    print(metrics.classification_report(y_val,y_pred_val))
+    print("   -----------------------------")
+    print("   classification report TEST")   
+    print("   -----------------------------")
+    print(metrics.classification_report(y_test,y_pred_te))
+    print("\n\n")
+    print("   -----------------------------")
+    print("    ROC")
+    print("   -----------------------------")
+#     plt.title('credit card model ROC')
+#     plt.plot(fpr, tpr, 'b', label = 'AUC = %0.2f' % roc_auc)
+#     plt.legend(loc = 'lower right')
+#     plt.plot([0, 1], [0, 1],'r--')
+#     plt.xlim([0, 1])
+#     plt.ylim([0, 1])
+#     plt.ylabel('True Positive Rate')
+#     plt.xlabel('False Positive Rate')
+#     plt.show()
+    plot_ROC(y_pred, y_train,y_pred_val, y_val, y_pred_te, y_test)
+    print("\n\n")
+    print("   -----------------------------")
+    print("    confusion matrix TRAIN")
+    print("   -----------------------------")
+    sns.heatmap(confusion1, annot=True, fmt='d', cmap='Blues')
+    plt.show()
+    print("   -----------------------------")
+    print("    confusion matrix VALID")
+    print("   -----------------------------")
+    sns.heatmap(confusion2, annot=True, fmt='d', cmap='Blues')
+    plt.show()
+    print("   -----------------------------")
+    print("    confusion matrix TEST")
+    print("   -----------------------------")
+    sns.heatmap(confusion3, annot=True, fmt='d', cmap='Blues')  
+
+    
+    
+def balanceSampling(X_tr, y_train, up_ratio=1,dn_ratio=1):
+    """
+    Docstring: up and under sampling data
+    
+    Parameters
+    ----------
+    up_ratio: upsampling ratio
+    dn_ratio: downsampling ratio
+
+    """
+    # Ratio argument is the percentage of the upsampled minority class in relation to the majority class. Default is 1.0
+    over = SMOTE(sampling_strategy = up_ratio)
+    under = RandomUnderSampler(sampling_strategy = dn_ratio)
+    steps = [('over', over), ('under', under)]
+    pipeline = Pipeline(steps=steps)
+    X_train_sm, y_train_sm = pipeline.fit_resample(X_tr, y_train)
+    
+    print(X_train_sm.shape, y_train_sm.shape)
+    return X_train_sm, y_train_sm
+    
+    
+def metric(self,prob,cl):
+    self.fpr, self.tpr, threshold = roc_curve(self.y_valid, prob)
+    auc = roc_auc_score(self.y_valid,prob)
+    self.plot_roc_curve(self.fpr,self.tpr)
+    acc = (self.y_valid==cl).mean()
+    f1 = f1_score(self.y_valid,cl)
+    print(acc,f1,auc)    
+    
+
+"""""""""""""""""""""""""""""""""""""""""
+XGBOOST + BAYESIAN OPTIMIZATION
+
+"""""""""""""""""""""""""""""""""""""""""
+    
+def xgbCv(dtrain,dvalid, eta, gamma, maxDepth, minChildWeight, subsample, colSample):
+    # prepare xgb parameters 
+    params = {
+        "objective": "binary:logistic",
+        "booster" : "gbtree",
+        "eval_metric": "auc",
+        "tree_method": 'auto',
+        "silent": 1,
+        "eta": eta,
+        "max_depth": int(maxDepth),
+        "min_child_weight" : minChildWeight,
+        "subsample": subsample,
+        "colsample_bytree": colSample,
+        "gamma": gamma
+    }
+    
+    #dtrain = xgb.DMatrix(X_train, y_train) 
+    #dvalid = xgb.DMatrix(X_valid, y_valid)
+    watchlist = [(dtrain, 'train'), (dvalid, 'eval')]
+   # print("numr",numRounds)
+    gbm = xgb.train(params, dtrain, 200, evals = watchlist, early_stopping_rounds = 100)
+    score = gbm.best_score
+    
+    # return the best score
+    return -1.0*score # invert the cv score to let bayopt maximize
+    
+def bayesOpt(dtrain,dvalid):
+    ranges = {
+        #'numRounds': (100, 500),
+        'eta': (0.001, 0.3),
+        'gamma': (0, 25),
+        'maxDepth': (1, 10),
+        'minChildWeight': (0, 10),
+        'subsample': (0, 1),
+        'colSample': (0, 1)
+    }
+    # proxy through a lambda to be able to pass train and features
+    optFunc = lambda eta, gamma, maxDepth, minChildWeight, subsample, colSample: xgbCv(dtrain,dvalid, eta, gamma, maxDepth, minChildWeight, subsample, colSample)
+    bo = BayesianOptimization(optFunc, ranges)
+    bo.maximize(init_points = 2, n_iter = 1, kappa = 2, acq = "ei", xi = 0.0)
+    
+    #bestAUC = round((-1.0 * bo.res['max']['max_val']), 6)
+    #print("\n Best AUC found: %f" % bestAUC)
+    #print("\n Parameters: %s" % bo.res['max']['max_params'])
+    return bo
+    
+    
+    
 """""""""""""""""""""""""""""
 self-modified fastai packages
 """""""""""""""""""""""""""""
