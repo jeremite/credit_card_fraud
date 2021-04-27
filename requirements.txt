@@ -1,4 +1,11 @@
 pyarrow
 pandas
 numpy
-matplotlib05
+matplotlib
+seaborn==0.11
+scikit-optimize
+xgboost==1.3.3
+hyperopt
+shap
+imblearn
+bayesian-optimization
